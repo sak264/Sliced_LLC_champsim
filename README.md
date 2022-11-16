@@ -9,3 +9,5 @@ THe graphs folder contains all the graphs present in the report.
 postprocessing_scripts contain the scripts we are using to extract relevant information from the stats printed by champsim.
 
 results_champsim_stats contain the original stats printed by champsim during the experiments. Note that some of them may not match the experimental setup mentioned in the report, since a large set of experiments were performed by differnt members of the groupand some of them were repeated.
+
+The sandybridge branch contains champsim code with slice selection using sandybridge hash function. The hash function was discussed in the refernce paper.
