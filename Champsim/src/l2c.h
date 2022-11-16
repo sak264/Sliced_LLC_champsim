@@ -110,6 +110,7 @@ public:
   vector<MemoryRequestConsumer *> all_lower_levels;
 
   uint32_t get_slice(uint32_t cpu, uint64_t address);
+  bool get_bit(uint64_t address , int n);
   bool filllike_miss(std::size_t set, std::size_t way, std::size_t slice,
                      PACKET &handle_pkt);
 

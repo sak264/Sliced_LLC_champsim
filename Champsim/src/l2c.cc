@@ -15,12 +15,41 @@
 extern VirtualMemory vmem;
 extern uint8_t warmup_complete[NUM_CPUS];
 
-uint32_t L2C::get_slice(uint32_t cpu, uint64_t address){
-  uint32_t slice = (address >> OFFSET_BITS) % NUM_CPUS;
-  total_miss_latency += DECODER_LOGIC_LATENCY + (slice == cpu) ? 0 : DECODER_REDIRECTION_LATENCY;
-	return slice;
+bool L2C::get_bit(uint64_t address , int n){
+  return (address>>n) & 1;
 }
 
+uint32_t L2C::get_slice(uint32_t cpu, uint64_t address){
+  uint64_t addr = (address >> OFFSET_BITS);
+  uint32_t slice;
+  uint32_t temp0 = get_bit(addr,6) ^ get_bit(addr,12) ^ get_bit(addr,17) ^ get_bit(addr,22) ^ get_bit(addr,18) ^ get_bit(addr,27) ^ get_bit(addr,24) ^ get_bit(addr,29) ^get_bit(addr,30)^ get_bit(addr,32);
+  uint32_t temp1 =  get_bit(addr,7) ^ get_bit(addr,12) ^ get_bit(addr,13) ^ get_bit(addr,17) ^ get_bit(addr,19)  ^ get_bit(addr,22) ^ get_bit(addr,23) ^ get_bit(addr,24) ^ get_bit(addr,25) ^ get_bit(addr,27) ^ get_bit(addr,28) ^ get_bit(addr,31) ^ get_bit(addr,32) ^ get_bit(addr,33);
+  uint32_t temp2 = get_bit(addr,8) ^ get_bit(addr,13) ^ get_bit(addr,14) ^ get_bit(addr,18) ^ get_bit(addr,20) ^ get_bit(addr,23) ^ get_bit(addr,24) ^ get_bit(addr,26)^ get_bit(addr,28) ^ get_bit(addr,31)^ get_bit(addr,32) ^ get_bit(addr,33);
+  uint32_t temp3  = get_bit(addr,9) ^ get_bit(addr,14) ^ get_bit(addr,15) ^ get_bit(addr,19) ^ get_bit(addr,21) ^ get_bit(addr,25) ^ get_bit(addr,24) ^ get_bit(addr,26)^ get_bit(addr,27) ^ get_bit(addr,29)^ get_bit(addr,33) ^ get_bit(addr,34);
+  uint32_t temp4 = get_bit(addr,10) ^ get_bit(addr,15) ^ get_bit(addr,16) ^ get_bit(addr,20) ^ get_bit(addr,22) ^ get_bit(addr,25) ^ get_bit(addr,27) ^ get_bit(addr,26)^ get_bit(addr,28) ^ get_bit(addr,30)^ get_bit(addr,34);
+  uint32_t temp5 = get_bit(addr,11) ^ get_bit(addr,16) ^ get_bit(addr,17) ^ get_bit(addr,21) ^ get_bit(addr,23) ^ get_bit(addr,26) ^ get_bit(addr,27) ^ get_bit(addr,28)^ get_bit(addr,29) ^ get_bit(addr,31);
+  uint32_t temp6 = get_bit(addr,12) ^ get_bit(addr,13) ^ get_bit(addr,14) ^ get_bit(addr,15) ^ get_bit(addr,16) ^ get_bit(addr,18) ^ get_bit(addr,19) ^ get_bit(addr,20)^ get_bit(addr,21) ^ get_bit(addr,24)^ get_bit(addr,25)^ get_bit(addr,26)^ get_bit(addr,28)^ get_bit(addr,30)^ get_bit(addr,31);
+
+
+uint32_t slice2 = (temp0^temp5)&(temp2|temp3&(temp4|temp5));
+uint32_t slice1 = temp1 & !slice2 ; 
+uint32_t slice0 = temp0 ^ temp1 ^ temp2 ^ temp3 ^ temp6 ^temp4 ;
+  if(NUM_CPUS>4){
+    slice = slice2*4 + slice1 * 2 + slice0*1;
+    total_miss_latency += DECODER_LOGIC_LATENCY + (slice == cpu) ? 0 : DECODER_REDIRECTION_LATENCY;
+    return slice2*4 + slice1 * 2 + slice0*1;
+  }
+  else if(NUM_CPUS > 2){
+    slice = slice1 * 2 + slice0*1;
+    total_miss_latency += DECODER_LOGIC_LATENCY + (slice == cpu) ? 0 : DECODER_REDIRECTION_LATENCY;
+    return slice1 * 2 + slice0*1;
+  }
+  else{
+    slice = slice0;
+    total_miss_latency += DECODER_LOGIC_LATENCY + (slice == cpu) ? 0 : DECODER_REDIRECTION_LATENCY;
+	return slice0;
+  }
+}
 void L2C::handle_fill()
 {
   while (writes_available_this_cycle > 0) {
